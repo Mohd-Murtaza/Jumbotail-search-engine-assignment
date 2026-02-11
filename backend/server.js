@@ -4,6 +4,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const { connectDB } = require("./config/db");
+const productRoutes = require("./routes/productRoutes");
 
 dotenv.config();
 
@@ -19,6 +20,9 @@ app.use(morgan("dev"));
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// API Routes
+app.use("/api/v1", productRoutes);
 
 const PORT = process.env.PORT || 4000;
 const MONGODB_URI = process.env.MONGODB_URI || "";

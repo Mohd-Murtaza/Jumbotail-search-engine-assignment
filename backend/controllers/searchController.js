@@ -38,29 +38,47 @@ const searchProducts = async (req, res) => {
       console.log(`📝 Using manual fallback | Corrected: "${correctedQuery}"`);
     }
 
-    // Step 2: MongoDB text search with fuzzy tolerance
+    // Step 2: MongoDB aggregation pipeline with category-based filtering
     const searchRegex = new RegExp(correctedQuery.split(' ').join('|'), 'i');
     console.log(`🔎 Searching MongoDB with regex: /${correctedQuery.split(' ').join('|')}/i`);
     
     const dbStartTime = Date.now();
-    // Find products matching the query
-    const products = await Product.find({
+    
+    // Build query conditions
+    const matchQuery = {
       $or: [
         { title: { $regex: searchRegex } },
         { description: { $regex: searchRegex } },
       ],
-    })
+    };
+    
+    // Add category filter if detected by LLM
+    if (intent.category && intent.category !== 'other') {
+      console.log(`📁 Category detected: ${intent.category}`);
+      // Use $or to boost exact category match, but still include others
+      matchQuery.$or.push({ category: intent.category });
+    }
+    
+    // Find products matching the query
+    const products = await Product.find(matchQuery)
     .select('-__v')
     .lean()
-    .limit(100); // Limit to keep performance good
+    .limit(150); // Increased limit to get more candidates
 
     const dbTime = Date.now() - dbStartTime;
     console.log(`💾 MongoDB returned ${products.length} products in ${dbTime}ms`);
 
-    // Step 3: Calculate rank score for each product
+    // Step 3: Calculate rank score for each product (with category boost)
     console.log(`🎯 Calculating ranking scores...`);
     const rankedProducts = products.map(product => {
-      const score = calculateRankScore(product, correctedQuery, intent);
+      let score = calculateRankScore(product, correctedQuery, intent);
+      
+      // Category match boost (if LLM detected category)
+      if (intent.category && product.category === intent.category) {
+        score += 30; // Significant boost for matching category
+        console.log(`  ✨ Category boost (+30) for ${product.title}`);
+      }
+      
       return {
         ...product,
         _rankScore: score,
@@ -94,6 +112,7 @@ const searchProducts = async (req, res) => {
         productId: product._id,
         title: product.title,
         description: product.description,
+        category: product.category,
         mrp: product.mrp,
         SellingPrice: product.price,
         rating: product.rating,

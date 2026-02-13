@@ -17,23 +17,40 @@ async function fetchFromAPI() {
     
     console.log(`✅ Got ${products.length} products from API`);
     
-    return products.map(p => ({
-      title: p.title,
-      description: `${p.description} - ${p.category} product`,
-      price: Math.round(p.price * 83),
-      mrp: Math.round(p.price * 83 * (1 + (p.discountPercentage || 20) / 100)),
-      currency: 'Rupee',
-      rating: Math.min(5, p.rating || 4.0),
-      stock: p.stock || Math.floor(Math.random() * 100) + 10,
-      unitsSold: Math.floor(Math.random() * 5000) + 100,
-      returnRate: (Math.random() * 15).toFixed(2),
-      complaints: Math.floor(Math.random() * 50),
-      metadata: new Map([
-        ['brand', p.brand],
-        ['category', p.category],
-        ['thumbnail', p.thumbnail]
-      ])
-    }));
+    return products.map(p => {
+      // Map DummyJSON categories to our schema enum
+      let category = 'other';
+      const catLower = (p.category || '').toLowerCase();
+      
+      if (catLower.includes('phone') || catLower.includes('mobile') || catLower.includes('smartphone')) {
+        category = 'phones';
+      } else if (catLower.includes('laptop')) {
+        category = 'laptops';
+      } else if (catLower.includes('tablet')) {
+        category = 'tablets';
+      } else if (catLower.includes('accessories') || catLower.includes('audio') || catLower.includes('wearables')) {
+        category = 'accessories';
+      }
+      
+      return {
+        title: p.title,
+        description: `${p.description} - ${p.category} product`,
+        category: category,
+        price: Math.round(p.price * 83),
+        mrp: Math.round(p.price * 83 * (1 + (p.discountPercentage || 20) / 100)),
+        currency: 'Rupee',
+        rating: Math.min(5, p.rating || 4.0),
+        stock: p.stock || Math.floor(Math.random() * 100) + 10,
+        unitsSold: Math.floor(Math.random() * 5000) + 100,
+        returnRate: (Math.random() * 15).toFixed(2),
+        complaints: Math.floor(Math.random() * 50),
+        metadata: new Map([
+          ['brand', p.brand],
+          ['category', p.category],
+          ['thumbnail', p.thumbnail]
+        ])
+      };
+    });
   } catch (error) {
     console.error('⚠️ API fetch failed:', error.message);
     return [];
@@ -109,14 +126,25 @@ async function scrapeRealProducts() {
       
       // Transform to schema
       products.forEach(p => {
-        // Detect category from URL
-        const category = url.includes('phones') ? 'mobile phone smartphone' : 
-                        url.includes('laptop') ? 'laptop computer' : 
-                        url.includes('tablet') ? 'tablet' : 'electronics';
+        // Detect category from URL and map to schema enum
+        let category = 'other';
+        let categoryKeywords = 'electronics';
+        
+        if (url.includes('phones')) {
+          category = 'phones';
+          categoryKeywords = 'mobile phone smartphone';
+        } else if (url.includes('laptop')) {
+          category = 'laptops';
+          categoryKeywords = 'laptop computer';
+        } else if (url.includes('tablet')) {
+          category = 'tablets';
+          categoryKeywords = 'tablet';
+        }
         
         allProducts.push({
           title: p.title,
-          description: `${p.desc || p.title} - ${category} - High quality electronics product`,
+          description: `${p.desc || p.title} - ${categoryKeywords} - High quality electronics product`,
+          category: category,
           price: Math.round(p.price * 83), // USD to INR
           mrp: Math.round(p.price * 83 * 1.25),
           currency: 'Rupee',
@@ -170,7 +198,11 @@ async function scrapeAndSeedProducts() {
     console.log(`\n📊 Total products: ${allProducts.length}`);
     console.log(`   - API: ${apiProducts.length}`);
     console.log(`   - Web Scraped: ${scrapedProducts.length}`);
-    console.log(`💾 Saving to database...`);
+    console.log(`💾 Clearing old data and saving to database...`);
+    
+    // Clear existing products to avoid duplicates and old schema
+    await Product.deleteMany({});
+    console.log(`🗑️  Cleared old products`);
     
     await Product.insertMany(allProducts);
     

@@ -104,6 +104,12 @@ Your task:
    - Latest preference: true if user wants newest models
    - Color: if mentioned
    - Storage: if mentioned (e.g., 128GB)
+   - Category: MUST be one of [phones, laptops, tablets, accessories, other]
+     * phones: mobile, smartphone, phone, iphone, samsung, etc.
+     * laptops: laptop, notebook, computer, macbook, etc.
+     * tablets: tablet, ipad, tab, etc.
+     * accessories: case, charger, earphones, headphones, mouse, keyboard, etc.
+     * other: if none match
 
 Return ONLY valid JSON, no extra text:
 {
@@ -112,7 +118,8 @@ Return ONLY valid JSON, no extra text:
     "pricePreference": "cheap|expensive|neutral",
     "latestPreferred": true|false,
     "color": "colorname or null",
-    "storage": "128GB or null"
+    "storage": "128GB or null",
+    "category": "phones|laptops|tablets|accessories|other"
   }
 }`
       },
@@ -138,6 +145,7 @@ Return ONLY valid JSON, no extra text:
         latestPreferred: parsed.intent?.latestPreferred || false,
         color: parsed.intent?.color || null,
         storage: parsed.intent?.storage || null,
+        category: parsed.intent?.category || null,
       }
     };
   } catch (err) {

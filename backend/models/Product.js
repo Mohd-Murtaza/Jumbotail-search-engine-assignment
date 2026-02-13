@@ -46,6 +46,12 @@ const productSchema = new mongoose.Schema(
       of: String,
       default: {},
     },
+    category: {
+      type: String,
+      enum: ["phones", "laptops", "tablets", "accessories", "other"],
+      default: "other",
+      index: true,
+    },
     // Business signals for ranking
     unitsSold: {
       type: Number,

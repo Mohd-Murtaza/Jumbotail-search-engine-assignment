@@ -110,18 +110,38 @@ const calculateRankScore = (product, query, intent) => {
   const titleLower = product.title.toLowerCase();
   const descLower = product.description.toLowerCase();
   
-  // 1. Text Relevance (0-50 points)
+  // 1. Text Relevance (0-50 points) with multi-term matching
+  const queryTerms = queryLower.split(/\s+/).filter(t => t.length > 0);
+  
   if (titleLower === queryLower) {
     score += 50; // Exact title match
   } else if (titleLower.includes(queryLower)) {
-    score += 40; // Title contains query
+    score += 40; // Title contains full query
   } else if (descLower.includes(queryLower)) {
-    score += 20; // Description contains query
+    score += 20; // Description contains full query
   } else {
-    // Fuzzy matching for spelling mistakes
-    const fuzzyScore = fuzzyMatch(titleLower, queryLower);
-    if (fuzzyScore > 0.7) {
-      score += fuzzyScore * 30;
+    // Multi-term matching: Give higher score if ALL terms match
+    const titleMatches = queryTerms.filter(term => titleLower.includes(term)).length;
+    const descMatches = queryTerms.filter(term => descLower.includes(term)).length;
+    
+    if (titleMatches === queryTerms.length) {
+      score += 35; // All terms in title
+    } else if (titleMatches > 0) {
+      score += (titleMatches / queryTerms.length) * 25; // Partial title matches
+    }
+    
+    if (descMatches === queryTerms.length && titleMatches < queryTerms.length) {
+      score += 15; // All terms in description
+    } else if (descMatches > 0 && titleMatches < queryTerms.length) {
+      score += (descMatches / queryTerms.length) * 10; // Partial desc matches
+    }
+    
+    // Fuzzy matching for spelling mistakes (only if poor matches)
+    if (titleMatches === 0 && descMatches === 0) {
+      const fuzzyScore = fuzzyMatch(titleLower, queryLower);
+      if (fuzzyScore > 0.7) {
+        score += fuzzyScore * 30;
+      }
     }
   }
   
@@ -152,10 +172,10 @@ const calculateRankScore = (product, query, intent) => {
   // Intent-based boosting
   if (intent.pricePreference === 'cheap') {
     // Boost lower priced items
-    score += Math.max(0, (50000 - product.price) / 5000);
+    score += Math.max(0, (50000 - product.price) / 1000); // Up to 50 points
   } else if (intent.pricePreference === 'expensive') {
     // Boost higher priced items
-    score += Math.min(product.price / 10000, 10);
+    score += Math.min(product.price / 3000, 30); // Up to 30 points
   }
   
   if (intent.latestPreferred) {
@@ -167,14 +187,20 @@ const calculateRankScore = (product, query, intent) => {
   
   if (intent.color) {
     // Exact color match in metadata or description
-    const metadataStr = JSON.stringify(Object.fromEntries(product.metadata || new Map())).toLowerCase();
+    const metadataObj = product.metadata instanceof Map 
+      ? Object.fromEntries(product.metadata) 
+      : (product.metadata || {});
+    const metadataStr = JSON.stringify(metadataObj).toLowerCase();
     if (titleLower.includes(intent.color) || descLower.includes(intent.color) || metadataStr.includes(intent.color)) {
       score += 25;
     }
   }
   
   if (intent.storage) {
-    const metadataStr = JSON.stringify(Object.fromEntries(product.metadata || new Map())).toLowerCase();
+    const metadataObj = product.metadata instanceof Map 
+      ? Object.fromEntries(product.metadata) 
+      : (product.metadata || {});
+    const metadataStr = JSON.stringify(metadataObj).toLowerCase();
     if (titleLower.includes(intent.storage.toLowerCase()) || metadataStr.includes(intent.storage.toLowerCase())) {
       score += 25;
     }

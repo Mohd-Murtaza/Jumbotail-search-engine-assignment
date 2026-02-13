@@ -5,6 +5,7 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const { connectDB } = require("./config/db");
 const productRoutes = require("./routes/productRoutes");
+const searchRoutes = require("./routes/searchRoutes");
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get("/health", (req, res) => {
 
 // API Routes
 app.use("/api/v1", productRoutes);
+app.use("/api/v1/search", searchRoutes);
 
 const PORT = process.env.PORT || 4000;
 const MONGODB_URI = process.env.MONGODB_URI || "";

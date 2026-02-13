@@ -6,10 +6,10 @@ const createProduct = async (req, res) => {
     const { title, description, rating, stock, price, mrp, currency } = req.body;
 
     // Simple validation
-    if (!title || !description || price === undefined || mrp === undefined || stock === undefined) {
+    if (!title || !description || rating === undefined || price === undefined || mrp === undefined || stock === undefined) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields: title, description, price, mrp, stock",
+        message: "Missing required fields: title, description, rating, price, mrp, stock",
       });
     }
 

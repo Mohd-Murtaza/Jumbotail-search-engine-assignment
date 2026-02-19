@@ -22,6 +22,19 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
+// Root endpoint
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "Jumbotail Search Engine API",
+    endpoints: {
+      health: "/health",
+      search: "/api/v1/search/product?query=iphone",
+      createProduct: "POST /api/v1/product",
+      updateMetadata: "PUT /api/v1/product/meta-data"
+    }
+  });
+});
+
 // API Routes
 app.use("/api/v1", productRoutes);
 app.use("/api/v1/search", searchRoutes);
